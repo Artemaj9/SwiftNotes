@@ -302,4 +302,31 @@ We can do this with the action var which takes a closure
 if let pushBehaviour = UIPuchBehavior(items: [...], mode: .instantaneous) {
 	pushBehavior.magnitude = ...
 	pushBehavior.angle = ...
-	 
+	pushBehavior.action = {
+		pushBehavior.dynamicAnimator!.removeBehavior(pushBehavior)
+	}
+	animator.addBehavior(pushBehavior) // will push right away
+}
+```
+
+But the above has a memory cycle because its action captures a pointer back to itself.
+**Se neither the action closure nor the pushBehavior can ever leave the heap!** 
+
+#### Example of using action and avoiding a memory cycle
+Even more dramatically, we could use unowned to break a cycle.
+The best example of this is back in our push behavior
+
+``` swift
+if let pushBehaviour = UIPuchBehavior(items: [...], mode: .instantaneous) {
+	pushBehavior.magnitude = ...
+	pushBehavior.angle = ...
+	pushBehavior.action = { [unowned pushBehavior] in
+		pushBehavior.dynamicAnimator!.removeBehavior(pushBehavior)
+	}
+	animator.addBehavior(pushBehavior) // will push right away
+}
+```
+The action closure no longer captures pushBehavior.
+And we can use this local pushBehavior without any Optional chaining (it's not Optional).
+It is safe to mark it unowned because if the action closure exists, so does the pushBehavior.
+But we'd better be right!
